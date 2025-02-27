@@ -15,7 +15,7 @@ import java.util.Random;
 public class UniqueIdGeneratorService implements IdService {
 
     private static final int BYTE_LENGTH = 6;
-    private final static String LISTEN_TOPIC_NAME = "imager-service";
+    private final static String LISTEN_TO_TOPIC_NAME = "imager-service";
     private final static String SEND_TO_TOPIC_NAME = "id-service";
     private final KafkaTemplate<String, String> kafkaTemplate;
 
@@ -28,9 +28,9 @@ public class UniqueIdGeneratorService implements IdService {
         return id;
     }
 
-    @KafkaListener(topics = LISTEN_TOPIC_NAME, groupId = "imager")
+    @KafkaListener(topics = LISTEN_TO_TOPIC_NAME, groupId = "imager")
     public void imagerServiceTopicListener(String value) {
-        log.info("ImagerServiceTopicListener | message:{}, topic:{}", value, LISTEN_TOPIC_NAME);
+        log.info("ImagerServiceTopicListener | message:{}, topic:{}", value, LISTEN_TO_TOPIC_NAME);
         if ("request-id".equals(value)) {
             String id = generateId();
             kafkaTemplate.send(SEND_TO_TOPIC_NAME, id);
