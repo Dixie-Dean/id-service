@@ -2,8 +2,6 @@ package dev.dixie.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Marker;
-import org.slf4j.MarkerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -17,27 +15,26 @@ import java.util.Random;
 public class UniqueIdGeneratorService implements IdService {
 
     private static final int BYTE_LENGTH = 6;
+    private final static String LISTEN_TOPIC_NAME = "imager-service";
+    private final static String SEND_TO_TOPIC_NAME = "id-service";
     private final KafkaTemplate<String, String> kafkaTemplate;
-
-    private final Marker kafkaMarker = MarkerFactory.getMarker("KAFKA");
-    private final Marker serviceMarker = MarkerFactory.getMarker("SERVICE");
 
     @Override
     public String generateId() {
         byte[] randomBytes = new byte[BYTE_LENGTH];
         new Random().nextBytes(randomBytes);
         String id = Base64.getUrlEncoder().encodeToString(randomBytes);
-        log.info(serviceMarker, "Generated ID:{}", id);
+        log.info("GenerateID | ID:{}", id);
         return id;
     }
 
-    @KafkaListener(topics = "imager-service", groupId = "imager")
+    @KafkaListener(topics = LISTEN_TOPIC_NAME, groupId = "imager")
     public void imagerServiceTopicListener(String value) {
-        log.info(kafkaMarker, "Received message:{} from topic:{}", value, "imager-service");
+        log.info("ImagerServiceTopicListener | message:{}, topic:{}", value, LISTEN_TOPIC_NAME);
         if ("request-id".equals(value)) {
             String id = generateId();
-            kafkaTemplate.send("id-service", id);
-            log.info(kafkaMarker, "Sent ID:{} to {}", id, "id-service");
+            kafkaTemplate.send(SEND_TO_TOPIC_NAME, id);
+            log.info("ImagerServiceTopicListener | ID:{} topic:{}", id, SEND_TO_TOPIC_NAME);
         }
     }
 }
