@@ -10,6 +10,6 @@ public class IdKafkaTopicConfig {
 
     @Bean
     public NewTopic idServiceTopic() {
-        return TopicBuilder.name("id-service").build();
+        return TopicBuilder.name("provide-id-topic").build();
     }
 }

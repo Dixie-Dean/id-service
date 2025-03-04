@@ -15,8 +15,8 @@ import java.util.Random;
 public class UniqueIdGeneratorService implements IdService {
 
     private static final int BYTE_LENGTH = 6;
-    private final static String LISTEN_TO_TOPIC_NAME = "imager-service";
-    private final static String SEND_TO_TOPIC_NAME = "id-service";
+    private final static String LISTEN_TO_TOPIC_NAME = "request-id-topic";
+    private final static String SEND_TO_TOPIC_NAME = "provide-id-topic";
     private final KafkaTemplate<String, String> kafkaTemplate;
 
     @Override
