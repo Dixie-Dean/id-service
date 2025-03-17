@@ -4,13 +4,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
 import java.util.Base64;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
@@ -37,27 +36,24 @@ public class UniqueIdGeneratorService implements IdService {
 
     public String getIdFromBatch() {
         try (var jedis = jedisPool.getResource()) {
+            ensureBatchSize(jedis);
+
+            // TODO handle null case
             var key = jedis.randomKey();
-            return jedis.get(key);
+            return jedis.getDel(key);
         }
     }
 
-    @Scheduled(fixedRate = 1, timeUnit = TimeUnit.MINUTES)
-    public void replenishBatch() {
-        System.out.println("REPLENISH");
-        try (var jedis = jedisPool.getResource()) {
-            if (jedis.dbSize() < MIN_BATCH_SIZE) {
-                for (int i = 0; i < MIN_BATCH_SIZE; i++) {
-                    pushIdToBatch(generateId());
-                }
-            }
+    //TODO find another way to synchronize the code
+    private synchronized void ensureBatchSize(Jedis jedis) {
+        if (jedis.dbSize() < MIN_BATCH_SIZE) {
+            replenishBatch(jedis);
         }
     }
 
-    private void pushIdToBatch(String id) {
-        try (var jedis = jedisPool.getResource()) {
-            var key = "key:%d".formatted(KEY_COUNTER.getAndIncrement());
-            jedis.set(key, id);
+    public void replenishBatch(Jedis jedis) {
+        for (int i = 0; i < MIN_BATCH_SIZE * 2; i++) {
+            jedis.set("key:%d".formatted(KEY_COUNTER.getAndIncrement()), generateId());
         }
     }
 
