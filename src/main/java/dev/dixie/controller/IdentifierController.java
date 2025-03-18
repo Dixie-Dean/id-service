@@ -17,7 +17,7 @@ public class IdentifierController {
 
     @GetMapping("/generate")
     public ResponseEntity<String> generateID() {
-        var id = idService.generateId();
+        var id = idService.generateID();
         return new ResponseEntity<>(id, HttpStatus.OK);
     }
 }
