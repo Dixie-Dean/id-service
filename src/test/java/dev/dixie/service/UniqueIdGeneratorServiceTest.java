@@ -38,20 +38,20 @@ public class UniqueIdGeneratorServiceTest {
     private UniqueIdGeneratorService service;
 
     @Test
-    void generateID_notNull() {
+    void generateID_NotNull() {
         var actualID = service.generateID();
         Assertions.assertNotNull(actualID);
     }
 
     @Test
-    void generateID_correctLength() {
+    void generateID_CorrectIDLength() {
         var actualID = service.generateID();
         var actualIDLength = actualID.length();
         assertEquals(CORRECT_ID_LENGTH, actualIDLength);
     }
 
     @Test
-    void retrieveID_correctID() {
+    void retrieveID_ReturnsCorrectID() {
         try (var jedis = Mockito.mock(Jedis.class)) {
             when(jedisPool.getResource()).thenReturn(jedis);
             when(jedis.dbSize()).thenReturn(MORE_THAN_MIN_SIZE);
@@ -64,7 +64,7 @@ public class UniqueIdGeneratorServiceTest {
     }
 
     @Test
-    void retrieveID_dbSizeTriggeredAtLeastOnce() {
+    void retrieveID_DbSizeTriggeredAtLeastOnce() {
         try (var jedis = Mockito.mock(Jedis.class)) {
             when(jedisPool.getResource()).thenReturn(jedis);
             when(jedis.dbSize()).thenReturn(MORE_THAN_MIN_SIZE);
@@ -76,7 +76,7 @@ public class UniqueIdGeneratorServiceTest {
     }
 
     @Test
-    void retrieveID_randomKeyTriggeredAtLeastOnce() {
+    void retrieveID_RandomKeyTriggeredAtLeastOnce() {
         try (var jedis = Mockito.mock(Jedis.class)) {
             when(jedisPool.getResource()).thenReturn(jedis);
             when(jedis.dbSize()).thenReturn(MORE_THAN_MIN_SIZE);
@@ -88,7 +88,7 @@ public class UniqueIdGeneratorServiceTest {
     }
 
     @Test
-    void retrieveID_notNullWhenBatchIsEmpty() {
+    void retrieveID_WhenBatchIsEmpty_ReturnsNotNull() {
         try (var jedis = Mockito.mock(Jedis.class)) {
             when(jedisPool.getResource()).thenReturn(jedis);
             when(jedis.dbSize()).thenReturn(MORE_THAN_MIN_SIZE);
@@ -102,7 +102,7 @@ public class UniqueIdGeneratorServiceTest {
     }
 
     @Test
-    void retrieveID_replenishBatchAsyncTriggeredWhenBatchSizeIsLow() {
+    void retrieveID_WhenBatchSizeIsLow_ReplenishBatchAsyncTriggered() {
         var countDownLatch = new CountDownLatch(1);
         try (var jedis = Mockito.mock(Jedis.class)) {
             when(jedisPool.getResource()).thenReturn(jedis);
