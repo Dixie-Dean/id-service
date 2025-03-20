@@ -22,11 +22,11 @@ import java.util.concurrent.atomic.AtomicLong;
 public class UniqueIdGeneratorService implements IdService {
 
     private static final ExecutorService EXECUTOR_SERVICE = Executors.newSingleThreadExecutor();
-    private static final JedisPool JEDIS_POOL = new JedisPool("localhost", 6381);
     private static final AtomicLong KEY_COUNTER = new AtomicLong();
     private static final int MIN_BATCH_SIZE = 5;
     private static final String LISTEN_TO_TOPIC_NAME = "request-id-topic";
     private static final String SEND_TO_TOPIC_NAME = "provide-id-topic";
+    private final JedisPool jedisPool;
     private final KafkaTemplate<String, String> kafkaTemplate;
 
     @Override
@@ -38,8 +38,8 @@ public class UniqueIdGeneratorService implements IdService {
         return id;
     }
 
-    private String retrieveID() {
-        try (var jedis = JEDIS_POOL.getResource()) {
+    protected String retrieveID() {
+        try (var jedis = jedisPool.getResource()) {
             if (isBatchSizeLessThanMin(jedis)) {
                 replenishBatchAsync();
             }
@@ -56,13 +56,13 @@ public class UniqueIdGeneratorService implements IdService {
     private boolean isBatchSizeLessThanMin(Jedis jedis) {
         var checkResult = jedis.dbSize() < MIN_BATCH_SIZE;
         log.info("isBatchSizeLessThanMin | result:{}", checkResult);
-        return jedis.dbSize() < MIN_BATCH_SIZE;
+        return checkResult;
     }
 
     private void replenishBatchAsync() {
         log.info("replenishBatchAsync | called");
         CompletableFuture.runAsync(() -> {
-            try (var jedis = JEDIS_POOL.getResource()) {
+            try (var jedis = jedisPool.getResource()) {
                 if (isBatchSizeLessThanMin(jedis)) {
                     replenishBatch(jedis);
                 }
