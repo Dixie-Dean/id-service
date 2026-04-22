@@ -1,5 +1,6 @@
 package dev.dixie.service;
 
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,6 +12,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -123,15 +125,16 @@ public class UniqueIdGeneratorServiceTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     void imagerServiceTopicListener_kafkaSendsMessages() {
         try (var jedis = Mockito.mock(Jedis.class)) {
             when(jedisPool.getResource()).thenReturn(jedis);
             when(jedis.randomKey()).thenReturn(KEY);
             when(jedis.getDel(KEY)).thenReturn(ID);
 
-            service.imagerServiceTopicListener("request-id");
+            service.imagerServiceTopicListener("request-id", UUID.randomUUID().toString());
 
-            verify(kafkaTemplate, atLeastOnce()).send(anyString(), anyString());
+            verify(kafkaTemplate, atLeastOnce()).send(any(ProducerRecord.class));
         }
     }
 

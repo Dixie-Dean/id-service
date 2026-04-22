@@ -2,12 +2,15 @@ package dev.dixie.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Service;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Optional;
 import java.util.UUID;
@@ -85,11 +88,13 @@ public class UniqueIdGeneratorService implements IdService {
     }
 
     @KafkaListener(topics = LISTEN_TO_TOPIC_NAME, groupId = "imager")
-    public void imagerServiceTopicListener(String value) {
-        log.info("imagerServiceTopicListener | message:{}, topic:{}", value, LISTEN_TO_TOPIC_NAME);
+    public void imagerServiceTopicListener(String value, @Header("correlationID") String correlationID) {
+        log.info("ID-SERVICE from IMAGER-SERVICE | message:{}, topic:{}, correlationID:{}", value, LISTEN_TO_TOPIC_NAME, correlationID);
         if ("request-id".equals(value)) {
             var id = retrieveID();
-            kafkaTemplate.send(SEND_TO_TOPIC_NAME, id);
+            ProducerRecord<String, String> record = new ProducerRecord<>(SEND_TO_TOPIC_NAME, id);
+            record.headers().add("correlationID", correlationID.getBytes(StandardCharsets.UTF_8));
+            kafkaTemplate.send(record);
             log.info("imagerServiceTopicListener | ID:{} topic:{}", id, SEND_TO_TOPIC_NAME);
         }
     }
