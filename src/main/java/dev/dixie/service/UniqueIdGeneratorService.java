@@ -36,7 +36,7 @@ public class UniqueIdGeneratorService implements IdService {
     public String generateID() {
         var uuidBytes = UUID.randomUUID().toString().getBytes();
         var encodedID = Base64.getUrlEncoder().encodeToString(uuidBytes);
-        var id = encodedID.substring(0, 8);
+        var id = encodedID.substring(0, 16);
         log.info("GenerateID | ID:{}", id);
         return id;
     }
