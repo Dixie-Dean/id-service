@@ -1,5 +1,6 @@
 package dev.dixie.service;
 
+import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -12,8 +13,6 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -34,9 +33,10 @@ public class UniqueIdGeneratorService implements IdService {
 
     @Override
     public String generateID() {
-        var uuidBytes = UUID.randomUUID().toString().getBytes();
-        var encodedID = Base64.getUrlEncoder().encodeToString(uuidBytes);
-        var id = encodedID.substring(0, 16);
+        var id = NanoIdUtils.randomNanoId(
+                NanoIdUtils.DEFAULT_NUMBER_GENERATOR,
+                NanoIdUtils.DEFAULT_ALPHABET,
+                12);
         log.info("GenerateID | ID:{}", id);
         return id;
     }
