@@ -6,6 +6,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
@@ -14,8 +15,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
@@ -23,13 +22,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @RequiredArgsConstructor
 public class UniqueIdGeneratorService implements IdService {
 
-    private static final ExecutorService EXECUTOR_SERVICE = Executors.newSingleThreadExecutor();
     private static final AtomicBoolean IS_REPLENISHING = new AtomicBoolean(false);
     private static final String ID_KEY = "available-ids";
     private static final int MIN_BATCH_SIZE = 5;
     private static final String LISTEN_TO_TOPIC_NAME = "request-id-topic";
     private static final String SEND_TO_TOPIC_NAME = "provide-id-topic";
+
     private final JedisPool jedisPool;
+    private final ThreadPoolTaskExecutor executorService;
     private final KafkaTemplate<String, String> kafkaTemplate;
 
     @Override
@@ -79,7 +79,7 @@ public class UniqueIdGeneratorService implements IdService {
                     } finally {
                         IS_REPLENISHING.set(false);
                     }
-                }, EXECUTOR_SERVICE)
+                }, executorService)
                 .exceptionally(exception -> {
                     log.error("replenishBatchAsync | exception:{}", exception.getMessage());
                     return null;
