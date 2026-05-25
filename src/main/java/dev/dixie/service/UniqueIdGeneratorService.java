@@ -12,13 +12,11 @@ import redis.clients.jedis.JedisPool;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
 @Service
@@ -27,8 +25,7 @@ public class UniqueIdGeneratorService implements IdService {
 
     private static final ExecutorService EXECUTOR_SERVICE = Executors.newSingleThreadExecutor();
     private static final AtomicBoolean IS_REPLENISHING = new AtomicBoolean(false);
-
-    private static final AtomicLong KEY_COUNTER = new AtomicLong();
+    private static final String ID_KEY = "available-ids";
     private static final int MIN_BATCH_SIZE = 5;
     private static final String LISTEN_TO_TOPIC_NAME = "request-id-topic";
     private static final String SEND_TO_TOPIC_NAME = "provide-id-topic";
@@ -49,18 +46,17 @@ public class UniqueIdGeneratorService implements IdService {
             if (isBatchSizeLessThanMin(jedis)) {
                 replenishBatchAsync();
             }
-            var key = getRandomKey(jedis).orElseGet(this::generateID);
-            log.info("retrieveID | {}", key);
-            return jedis.getDel(key);
+            var id = jedis.spop(ID_KEY);
+
+            if (id == null) {
+                id = generateID();
+            }
+            return id;
         }
     }
 
-    private Optional<String> getRandomKey(Jedis jedis) {
-        return Optional.ofNullable(jedis.randomKey());
-    }
-
     private boolean isBatchSizeLessThanMin(Jedis jedis) {
-        var checkResult = jedis.dbSize() < MIN_BATCH_SIZE;
+        var checkResult = jedis.scard(ID_KEY) < MIN_BATCH_SIZE;
         log.info("isBatchSizeLessThanMin | result:{}", checkResult);
         return checkResult;
     }
@@ -94,7 +90,7 @@ public class UniqueIdGeneratorService implements IdService {
     }
 
     private void pushID(Jedis jedis) {
-        jedis.set("key:%d".formatted(KEY_COUNTER.getAndIncrement()), generateID());
+        jedis.sadd(ID_KEY, generateID());
     }
 
     @KafkaListener(topics = LISTEN_TO_TOPIC_NAME, groupId = "imager")
