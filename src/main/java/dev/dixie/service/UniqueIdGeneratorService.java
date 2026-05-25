@@ -17,6 +17,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
@@ -25,6 +26,8 @@ import java.util.concurrent.atomic.AtomicLong;
 public class UniqueIdGeneratorService implements IdService {
 
     private static final ExecutorService EXECUTOR_SERVICE = Executors.newSingleThreadExecutor();
+    private static final AtomicBoolean IS_REPLENISHING = new AtomicBoolean(false);
+
     private static final AtomicLong KEY_COUNTER = new AtomicLong();
     private static final int MIN_BATCH_SIZE = 5;
     private static final String LISTEN_TO_TOPIC_NAME = "request-id-topic";
@@ -64,13 +67,20 @@ public class UniqueIdGeneratorService implements IdService {
 
     private void replenishBatchAsync() {
         log.info("replenishBatchAsync | called");
+
+        if (!IS_REPLENISHING.compareAndSet(false, true)) {
+            return;
+        }
+
         CompletableFuture.runAsync(() -> {
-            try (var jedis = jedisPool.getResource()) {
-                if (isBatchSizeLessThanMin(jedis)) {
-                    replenishBatch(jedis);
-                }
-            }
-        }, EXECUTOR_SERVICE)
+                    try (var jedis = jedisPool.getResource()) {
+                        if (isBatchSizeLessThanMin(jedis)) {
+                            replenishBatch(jedis);
+                        }
+                    } finally {
+                        IS_REPLENISHING.set(false);
+                    }
+                }, EXECUTOR_SERVICE)
                 .exceptionally(exception -> {
                     log.error("replenishBatchAsync | exception:{}", exception.getMessage());
                     return null;
