@@ -52,6 +52,9 @@ public class UniqueIdGeneratorService implements IdService {
                 id = generateID();
             }
             return id;
+        } catch (Exception exception) {
+            log.error("retrieveID | exception:{}", exception.getMessage());
+            return generateID();
         }
     }
 
